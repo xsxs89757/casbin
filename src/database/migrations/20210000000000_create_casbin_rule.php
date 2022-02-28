@@ -19,7 +19,7 @@ final class CreateCasbinRule extends AbstractMigration
     public function change(): void
     {
         // 权限
-        $rule = $this->table('rule', ['signed' => false]);
+        $rule = $this->table('casbin_rule', ['signed' => false]);
         $rule->addColumn('ptype', 'string', ['limit' => 8, 'comment' => '规则类型'])
             ->addColumn('v0', 'string', ['default' => ''])
             ->addColumn('v1', 'string', ['default' => ''])

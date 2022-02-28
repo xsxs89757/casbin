@@ -8,12 +8,16 @@ use Casbin\Persist\Adapter;
 use Casbin\Persist\AdapterHelper;
 use Casbin\Persist\UpdatableAdapter;
 use Casbin\Persist\BatchAdapter;
+use Casbin\Persist\FilteredAdapter;
+use Casbin\Persist\Adapters\Filter;
+use Casbin\Exceptions\InvalidFilterTypeException;
 use Qifen\Casbin\Model\RuleModel;
+use support\Db;
 
 /**
  * DatabaseAdapter.
  */
-class DatabaseAdapter implements Adapter, UpdatableAdapter, BatchAdapter
+class DatabaseAdapter implements Adapter, UpdatableAdapter, BatchAdapter, FilteredAdapter
 {
     use AdapterHelper;
 
@@ -238,5 +242,109 @@ class DatabaseAdapter implements Adapter, UpdatableAdapter, BatchAdapter
                 $this->updatePolicy($sec, $ptype, $oldRule, $newRules[$i]);
             }
         });
+    }
+
+    /**
+     * UpdateFilteredPolicies deletes old rules and adds new rules.
+     *
+     * @param string $sec
+     * @param string $ptype
+     * @param array $newPolicies
+     * @param integer $fieldIndex
+     * @param string ...$fieldValues
+     * @return array
+     */
+    public function updateFilteredPolicies(string $sec, string $ptype, array $newPolicies, int $fieldIndex, string ...$fieldValues): array
+    {
+        $where['ptype'] = $ptype;
+        foreach ($fieldValues as $fieldValue) {
+            $suffix = $fieldIndex++;
+            if (!is_null($fieldValue) && $fieldValue !== '') {
+                $where['v'. $suffix] = $fieldValue;
+            }
+        }
+
+        $newP = [];
+        $oldP = [];
+        foreach ($newPolicies as $newRule) {
+            $col['ptype'] = $ptype;
+            foreach ($newRule as $key => $value) {
+                $col['v' . strval($key)] = $value;
+            }
+            $newP[] = $col;
+        }
+
+        Db::transaction(function () use ($newP, $where, &$oldP) {
+            $oldRules = $this->model->where($where);
+            $oldP = $oldRules->get()->makeHidden(['id'])->toArray();
+
+            foreach ($oldP as &$item) {
+                $item = array_filter($item, function ($value) {
+                    return !is_null($value) && $value !== '';
+                });
+                unset($item['ptype']);
+            }
+
+            $oldRules->delete();
+            $this->model->create($newP);
+        });
+
+        // return deleted rules
+        return $oldP;
+    }
+
+    /**
+     * Returns true if the loaded policy has been filtered.
+     *
+     * @return bool
+     */
+    public function isFiltered(): bool
+    {
+        return $this->filtered;
+    }
+
+    /**
+     * Sets filtered parameter.
+     *
+     * @param bool $filtered
+     */
+    public function setFiltered(bool $filtered): void
+    {
+        $this->filtered = $filtered;
+    }
+
+    /**
+     * Loads only policy rules that match the filter.
+     *
+     * @param Model $model
+     * @param mixed $filter
+     */
+    public function loadFilteredPolicy(Model $model, $filter): void
+    {
+        $instance = $this->model;
+
+        if (is_string($filter)) {
+            $instance = $instance->whereRaw($filter);
+        } elseif ($filter instanceof Filter) {
+            foreach ($filter->p as $k => $v) {
+                $where[$v] = $filter->g[$k];
+                $instance = $instance->where($v, $filter->g[$k]);
+            }
+        } elseif ($filter instanceof \Closure) {
+            $instance = $instance->where($filter);
+        } else {
+            throw new InvalidFilterTypeException('invalid filter type');
+        }
+        $rows = $instance->get()->makeHidden(['id'])->toArray();
+        foreach ($rows as $row) {
+            $row = array_filter($row, function ($value) {
+                return !is_null($value) && $value !== '';
+            });
+            $line = implode(', ', array_filter($row, function ($val) {
+                return '' != $val && !is_null($val);
+            }));
+            $this->loadPolicyLine(trim($line), $model);
+        }
+        $this->setFiltered(true);
     }
 }

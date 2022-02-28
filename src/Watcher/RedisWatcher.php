@@ -7,6 +7,7 @@ namespace Qifen\Casbin\Watcher;
 
 use Casbin\Persist\Watcher;
 use Closure;
+use Exception;
 use Workerman\Redis\Client;
 
 class RedisWatcher implements Watcher
@@ -87,7 +88,11 @@ class RedisWatcher implements Watcher
         $config['database'] = $config['database'] ?? 0;
 
         $redis = new Client('redis://' . $config['host'] . ':' . $config['port']);
-        $redis->auth($config['password'] ?? '');
+        $redis->auth($config['password'] ?? '',function($res){
+            if(!$res){
+                throw new \Exception('redis 无法连接');
+            }
+        });
 
         return $redis;
     }
