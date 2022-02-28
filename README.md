@@ -15,7 +15,7 @@ composer require qifen/casbin
 
 （1）修改数据库 `database` 配置
 
-（2）执行 `php phinx migrate -e dev -t create_casbin_rule` 导入数据库
+（2）执行 `php phinx migrate -e dev -t 20210000000000_create_casbin_rule` 导入数据库
 
 （3）配置 `config/redis` 配置
 
