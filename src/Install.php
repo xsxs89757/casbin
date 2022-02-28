@@ -10,7 +10,7 @@ class Install
      */
     protected static $pathRelation = array (
         'config/plugin/qifen/casbin' => 'config/plugin/qifen/casbin',
-        'database/migrations/create_casbin_rule.php' => 'database/migrations/create_casbin_rule.php'
+        'database/migrations/20210000000000_create_casbin_rule.php' => 'database/migrations/20210000000000_create_casbin_rule.php'
     );
 
     /**
