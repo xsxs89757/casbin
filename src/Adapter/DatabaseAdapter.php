@@ -71,7 +71,7 @@ class DatabaseAdapter implements Adapter, UpdatableAdapter, BatchAdapter, Filter
     {
         $rows = $this->model->select(['ptype', 'v0', 'v1', 'v2', 'v3', 'v4', 'v5'])->get()->toArray();
         foreach ($rows as $row) {
-            $line = implode(', ', array_filter(array_slice($row, 1), function ($val) {
+            $line = implode(', ', array_filter($row, function ($val) {
                 return '' != $val && !is_null($val);
             }));
             $this->loadPolicyLine(trim($line), $model);
