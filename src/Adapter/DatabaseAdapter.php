@@ -41,7 +41,7 @@ class DatabaseAdapter implements Adapter, UpdatableAdapter, BatchAdapter, Filter
     public function __construct()
     {
         $this->model = new RuleModel();
-        $this->model->table = config('plugin.tinywan.casbin.permission.default.rules_table');
+        $this->model->table = config('plugin.qifen.casbin.permission.'.config('plugin.qifen.casbin.permission.default').'.database.rules_table');
     }
 
     /**
